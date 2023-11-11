@@ -2,11 +2,12 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { CreateUserDto } from './dto/createUser.dto';
 import { UserEntity } from './user.entity';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { IsNull, Repository } from 'typeorm';
 import { sign } from 'jsonwebtoken';
 import { UserResponseInterface } from './types/UserResponse.interface';
 import { LoginUserDto } from './dto/loginUser.dto';
 import { compare } from 'bcrypt';
+import { UpdateUserDto } from './dto/updateUser.dto';
 
 @Injectable()
 export class UserService {
@@ -20,7 +21,7 @@ export class UserService {
       where: { email: createUserDto.email },
     });
     const userByUsername = await this.userRepository.findOne({
-      where: { email: createUserDto.email },
+      where: { username: createUserDto.username },
     });
     if (userByEmail || userByUsername) {
       throw new HttpException(
@@ -30,13 +31,17 @@ export class UserService {
     }
     const newUser = new UserEntity();
     Object.assign(newUser, createUserDto);
-    return this.userRepository.save(newUser);
+    const user = await this.userRepository.save(newUser);
+
+    delete user.password;
+
+    return user;
   }
 
   async login(loginUserDto: LoginUserDto): Promise<UserEntity> {
     const user = await this.userRepository.findOne({
       where: { email: loginUserDto.email },
-      select: ['id', 'bio', 'email', 'image', 'username', 'password'],
+      select: ['id', 'email', 'username', 'bio', 'password', 'image'],
     });
 
     if (!user) {
@@ -57,7 +62,31 @@ export class UserService {
     return user;
   }
 
-  async findById(id: string): Promise<UserEntity> {
+  async updateUser(
+    id: number,
+    updateUserDto: UpdateUserDto,
+  ): Promise<UserEntity> {
+    const userByEmail = await this.userRepository.findOne({
+      where: { email: updateUserDto.email || IsNull() },
+    });
+
+    const userByUsername = await this.userRepository.findOne({
+      where: { username: updateUserDto.username || IsNull() },
+    });
+
+    if (userByEmail || userByUsername) {
+      throw new HttpException(
+        'Email or username are taken',
+        HttpStatus.UNPROCESSABLE_ENTITY,
+      );
+    }
+
+    const user = await this.findById(id);
+    Object.assign(user, updateUserDto);
+    return this.userRepository.save(user);
+  }
+
+  async findById(id: number): Promise<UserEntity> {
     return this.userRepository.findOne({ where: { id } });
   }
 
