@@ -1,4 +1,11 @@
-import { Controller, Get, Param, Post, Delete, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  Post,
+  Delete,
+  UseGuards,
+} from '@nestjs/common';
 import { ProfileService } from './profile.service';
 import { User } from '@app/user/decorators/user.decorator';
 import { ProfileResponseInterface } from './types/profileResponse.interface';
@@ -32,7 +39,7 @@ export class ProfileController {
       username,
     );
 
-    return this.profileService.buildProfileResponse(profile); 
+    return this.profileService.buildProfileResponse(profile);
   }
 
   @Delete(':username/follow')
@@ -46,6 +53,6 @@ export class ProfileController {
       username,
     );
 
-    return this.profileService.buildProfileResponse(profile); 
+    return this.profileService.buildProfileResponse(profile);
   }
 }

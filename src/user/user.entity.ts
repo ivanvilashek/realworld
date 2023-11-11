@@ -40,7 +40,7 @@ export class UserEntity {
   @OneToMany(() => ArticleEntity, (acticle) => acticle.author)
   articles: ArticleEntity[];
 
-  @ManyToMany(()=>ArticleEntity)
+  @ManyToMany(() => ArticleEntity)
   @JoinTable()
-  favorites: ArticleEntity[]
+  favorites: ArticleEntity[];
 }

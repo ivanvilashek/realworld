@@ -17,7 +17,7 @@ import { ProfileModule } from './profile/profile.module';
     TagModule,
     UserModule,
     ArticleModule,
-    ProfileModule
+    ProfileModule,
   ],
   controllers: [AppController],
   providers: [AppService],
