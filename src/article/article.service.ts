@@ -1,5 +1,5 @@
 import { UserEntity } from '@app/user/user.entity';
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { CreateArticleDto } from './dto/createArticle.dto';
 import { ArticleEntity } from './article.entity';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -9,6 +9,11 @@ import slugify from 'slugify';
 import { UpdateArticleDto } from './dto/updateArticle.dto';
 import { ArticlesResponseInterface } from './types/articlesResponse.interface';
 import { FollowEntity } from '@app/profile/follow.entity';
+import { CommentEntity } from './comment.entity';
+import { CommentResponseInterface } from './types/commentResponse.interface';
+import { CreateCommentDto } from './dto/createComment.dto';
+import { ProfileService } from '@app/profile/profile.service';
+import { CommentsResponseInterface } from './types/commentsResponse.interface';
 
 @Injectable()
 export class ArticleService {
@@ -19,6 +24,10 @@ export class ArticleService {
     private readonly userRepository: Repository<UserEntity>,
     @InjectRepository(FollowEntity)
     private readonly followRepository: Repository<FollowEntity>,
+    @InjectRepository(CommentEntity)
+    private readonly commentRepository: Repository<CommentEntity>,
+    @Inject(ProfileService)
+    private readonly profileService: ProfileService,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -182,6 +191,70 @@ export class ArticleService {
     return this.articleRepository.save(article);
   }
 
+  async addCommentToArticle(
+    slug: string,
+    user: UserEntity,
+    createCommentDto: CreateCommentDto,
+  ): Promise<CommentEntity> {
+    const article = await this.getArticleBySlug(slug);
+    const profile = await this.profileService.getProfile(
+      user.id,
+      user.username,
+    );
+    delete article.author;
+    delete profile.email;
+    const comment = new CommentEntity();
+    Object.assign(comment, createCommentDto);
+    comment.article = article;
+    comment.author = profile;
+
+    return this.commentRepository.save(comment);
+  }
+
+  async deleteComment(
+    slug: string,
+    userId: number,
+    commentId: number,
+  ): Promise<DeleteResult> {
+    await this.getArticleBySlug(slug);
+    const comment = await this.commentRepository.findOne({
+      where: { id: commentId },
+    });
+
+    if (comment.author.id !== userId) {
+      throw new HttpException('Permission denied', HttpStatus.FORBIDDEN);
+    }
+
+    return this.commentRepository.delete({ id: commentId });
+  }
+
+  async getCommentsFromArticle(
+    slug: string,
+    userId: number,
+  ): Promise<CommentsResponseInterface> {
+    const article = await this.getArticleBySlug(slug);
+    const queryBuilder = this.dataSource
+      .getRepository(CommentEntity)
+      .createQueryBuilder('comments')
+      .where('comments.articleId = :id', { id: article.id })
+      .leftJoinAndSelect('comments.author', 'author')
+      .orderBy('comments.createdAt', 'DESC');
+
+    const followingUserIds: number[] = [];
+    if (userId) {
+      const follows = await this.followRepository.find({
+        where: { followerId: userId },
+      });
+      followingUserIds.push(...follows.map((follows) => follows.followingId));
+    }
+    const comments = await queryBuilder.getMany();
+    const updatedComments = comments.map((comment) => {
+      const following = followingUserIds.includes(comment.author.id);
+      return { ...comment, author: { ...comment.author, following } };
+    });
+    return { comments: updatedComments };
+  }
+
   async addArticleToFavorites(
     slug: string,
     userId: number,
@@ -231,6 +304,10 @@ export class ArticleService {
 
   buildArticleResponse(article: ArticleEntity): ArticleResponseInterface {
     return { article };
+  }
+
+  buildCommentResponse(comment: CommentEntity): CommentResponseInterface {
+    return { comment };
   }
 
   private getSlug(title: string): string {

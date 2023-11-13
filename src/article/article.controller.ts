@@ -20,11 +20,24 @@ import { DeleteResult } from 'typeorm';
 import { UpdateArticleDto } from './dto/updateArticle.dto';
 import { ArticlesResponseInterface } from './types/articlesResponse.interface';
 import { BackendValidationPipe } from '@app/shared/pipes/backendValidation.pipe';
+import { CreateCommentDto } from './dto/createComment.dto';
+import { CommentResponseInterface } from './types/commentResponse.interface';
+import { CommentsResponseInterface } from './types/commentsResponse.interface';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBasicAuth,
+  ApiBody,
+} from '@nestjs/swagger';
 
+@ApiTags('Articles')
 @Controller('articles')
 export class ArticleController {
   constructor(private readonly articleService: ArticleService) {}
 
+  @ApiOperation({ summary: 'Get all articles', description: 'Optional auth' })
+  @ApiResponse({ status: 200, description: 'Return all articles.' })
   @Get()
   async findAll(
     @User('id') userId: number,
@@ -33,6 +46,8 @@ export class ArticleController {
     return this.articleService.findAll(userId, query);
   }
 
+  @ApiOperation({ summary: 'Get article feed' })
+  @ApiBasicAuth()
   @Get('feed')
   @UseGuards(AuthGuard)
   async getFeed(
@@ -42,6 +57,9 @@ export class ArticleController {
     return this.articleService.getFeed(userId, query);
   }
 
+  @ApiOperation({ summary: 'Create article' })
+  @ApiBody({})
+  @ApiBasicAuth()
   @Post()
   @UsePipes(new BackendValidationPipe())
   @UseGuards(AuthGuard)
@@ -56,6 +74,7 @@ export class ArticleController {
     return this.articleService.buildArticleResponse(article);
   }
 
+  @ApiOperation({ summary: 'Get article' })
   @Get(':slug')
   async getArticleBySlug(
     @Param('slug') slug: string,
@@ -64,6 +83,8 @@ export class ArticleController {
     return this.articleService.buildArticleResponse(article);
   }
 
+  @ApiOperation({ summary: 'Delete article' })
+  @ApiBasicAuth()
   @Delete(':slug')
   @UseGuards(AuthGuard)
   async deleteArticle(
@@ -73,6 +94,8 @@ export class ArticleController {
     return await this.articleService.deleteArticle(slug, userId);
   }
 
+  @ApiOperation({ summary: 'Update article' })
+  @ApiBasicAuth()
   @Put(':slug')
   @UsePipes(BackendValidationPipe)
   @UseGuards(AuthGuard)
@@ -89,6 +112,50 @@ export class ArticleController {
     return this.articleService.buildArticleResponse(article);
   }
 
+  @ApiOperation({ summary: 'Create comment' })
+  @ApiBasicAuth()
+  @Post(':slug/comments')
+  @UseGuards(AuthGuard)
+  @UsePipes(new BackendValidationPipe())
+  async addCommentToArticle(
+    @User() user: UserEntity,
+    @Param('slug') slug: string,
+    @Body('comment') createCommenDto: CreateCommentDto,
+  ): Promise<CommentResponseInterface> {
+    const comment = await this.articleService.addCommentToArticle(
+      slug,
+      user,
+      createCommenDto,
+    );
+
+    return this.articleService.buildCommentResponse(comment);
+  }
+
+  @ApiOperation({ summary: 'Get comments' })
+  @ApiBasicAuth()
+  @Get(':slug/comments')
+  @UseGuards(AuthGuard)
+  async getCommentsFromArticle(
+    @User('id') userId: number,
+    @Param('slug') slug: string,
+  ): Promise<CommentsResponseInterface> {
+    return this.articleService.getCommentsFromArticle(slug, userId);
+  }
+
+  @ApiOperation({ summary: 'Delete article' })
+  @ApiBasicAuth()
+  @Delete(':slug/comments/:id')
+  @UseGuards(AuthGuard)
+  async deleteComment(
+    @User('id') userId: number,
+    @Param('slug') slug: string,
+    @Param('id') commentId: number,
+  ): Promise<DeleteResult> {
+    return this.articleService.deleteComment(slug, userId, commentId);
+  }
+
+  @ApiOperation({ summary: 'Favorite article' })
+  @ApiBasicAuth()
   @Post(':slug/favorite')
   @UseGuards(AuthGuard)
   async addArticleToFavorites(
@@ -102,6 +169,8 @@ export class ArticleController {
     return this.articleService.buildArticleResponse(article);
   }
 
+  @ApiOperation({ summary: 'Unfavorite article' })
+  @ApiBasicAuth()
   @Delete(':slug/favorite')
   @UseGuards(AuthGuard)
   async deleteArticleFromFavorites(

@@ -10,6 +10,7 @@ import {
 import { hash } from 'bcrypt';
 import { ArticleEntity } from '@app/article/article.entity';
 import { Exclude } from 'class-transformer';
+import { CommentEntity } from '@app/article/comment.entity';
 
 @Entity({ name: 'users' })
 export class UserEntity {
@@ -39,6 +40,9 @@ export class UserEntity {
 
   @OneToMany(() => ArticleEntity, (acticle) => acticle.author)
   articles: ArticleEntity[];
+
+  @OneToMany(() => CommentEntity, (comment) => comment.author)
+  comments: ArticleEntity[];
 
   @ManyToMany(() => ArticleEntity)
   @JoinTable()

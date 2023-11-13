@@ -16,7 +16,9 @@ import { UserEntity } from './user.entity';
 import { AuthGuard } from './guards/auth.guard';
 import { UpdateUserDto } from './dto/updateUser.dto';
 import { BackendValidationPipe } from '@app/shared/pipes/backendValidation.pipe';
+import { ApiTags } from '@nestjs/swagger';
 
+@ApiTags('Users')
 @Controller({})
 export class UserController {
   constructor(private readonly userService: UserService) {}

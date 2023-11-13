@@ -10,5 +10,6 @@ import { FollowEntity } from './follow.entity';
   imports: [TypeOrmModule.forFeature([UserEntity, FollowEntity])],
   controllers: [ProfileController],
   providers: [ProfileService, AuthGuard],
+  exports: [ProfileService],
 })
 export class ProfileModule {}

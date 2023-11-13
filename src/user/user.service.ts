@@ -17,18 +17,11 @@ export class UserService {
   ) {}
 
   async createUser(createUserDto: CreateUserDto): Promise<UserEntity> {
-    const userByEmail = await this.userRepository.findOne({
-      where: { email: createUserDto.email },
-    });
-    const userByUsername = await this.userRepository.findOne({
-      where: { username: createUserDto.username },
-    });
-    if (userByEmail || userByUsername) {
-      throw new HttpException(
-        'Email or username are taken',
-        HttpStatus.UNPROCESSABLE_ENTITY,
-      );
-    }
+    await this.checkEmailAndUsername(
+      createUserDto.email,
+      createUserDto.username,
+    );
+
     const newUser = new UserEntity();
     Object.assign(newUser, createUserDto);
     const user = await this.userRepository.save(newUser);
@@ -66,20 +59,10 @@ export class UserService {
     id: number,
     updateUserDto: UpdateUserDto,
   ): Promise<UserEntity> {
-    const userByEmail = await this.userRepository.findOne({
-      where: { email: updateUserDto.email || IsNull() },
-    });
-
-    const userByUsername = await this.userRepository.findOne({
-      where: { username: updateUserDto.username || IsNull() },
-    });
-
-    if (userByEmail || userByUsername) {
-      throw new HttpException(
-        'Email or username are taken',
-        HttpStatus.UNPROCESSABLE_ENTITY,
-      );
-    }
+    await this.checkEmailAndUsername(
+      updateUserDto.email,
+      updateUserDto.username,
+    );
 
     const user = await this.findById(id);
     Object.assign(user, updateUserDto);
@@ -90,7 +73,32 @@ export class UserService {
     return this.userRepository.findOne({ where: { id } });
   }
 
-  generateJwt(user: UserEntity): string {
+  private async checkEmailAndUsername(email: string, username: string) {
+    const errorResponse = {
+      errors: {},
+    };
+
+    const userByEmail = await this.userRepository.findOne({
+      where: { email: email },
+    });
+    const userByUsername = await this.userRepository.findOne({
+      where: { username: username },
+    });
+
+    if (userByEmail) {
+      errorResponse.errors['email'] = 'has already been taken';
+    }
+
+    if (userByUsername) {
+      errorResponse.errors['username'] = 'has already been taken';
+    }
+
+    if (userByEmail || userByUsername) {
+      throw new HttpException(errorResponse, HttpStatus.UNPROCESSABLE_ENTITY);
+    }
+  }
+
+  private generateJwt(user: UserEntity): string {
     return sign(
       {
         id: user.id,
