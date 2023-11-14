@@ -29,7 +29,14 @@ import {
   ApiResponse,
   ApiBasicAuth,
   ApiBody,
+  ApiExtraModels,
+  getSchemaPath,
+  ApiQuery,
+  ApiCreatedResponse,
 } from '@nestjs/swagger';
+import { ArticleQueryDto } from './dto/articleQuery.dto';
+import { FeedQueryDto } from './dto/feedQuery.dto';
+import { ArticleEntity } from './article.entity';
 
 @ApiTags('Articles')
 @Controller('articles')
@@ -41,7 +48,7 @@ export class ArticleController {
   @Get()
   async findAll(
     @User('id') userId: number,
-    @Query() query: any,
+    @Query() query: ArticleQueryDto,
   ): Promise<ArticlesResponseInterface> {
     return this.articleService.findAll(userId, query);
   }
@@ -52,13 +59,27 @@ export class ArticleController {
   @UseGuards(AuthGuard)
   async getFeed(
     @User('id') userId: number,
-    @Query() query: any,
+    @Query() query: FeedQueryDto,
   ): Promise<ArticlesResponseInterface> {
     return this.articleService.getFeed(userId, query);
   }
 
   @ApiOperation({ summary: 'Create article' })
-  @ApiBody({})
+  @ApiExtraModels(CreateArticleDto, ArticleEntity)
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        article: {
+          $ref: getSchemaPath(CreateArticleDto),
+        },
+      },
+    },
+  })
+  @ApiCreatedResponse({
+    description: 'The record has been successfully created',
+    type: ArticleEntity,
+  })
   @ApiBasicAuth()
   @Post()
   @UsePipes(new BackendValidationPipe())
@@ -74,7 +95,7 @@ export class ArticleController {
     return this.articleService.buildArticleResponse(article);
   }
 
-  @ApiOperation({ summary: 'Get article' })
+  @ApiOperation({ summary: 'Get single article' })
   @Get(':slug')
   async getArticleBySlug(
     @Param('slug') slug: string,
@@ -96,6 +117,17 @@ export class ArticleController {
 
   @ApiOperation({ summary: 'Update article' })
   @ApiBasicAuth()
+  @ApiExtraModels(UpdateArticleDto)
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        article: {
+          $ref: getSchemaPath(UpdateArticleDto),
+        },
+      },
+    },
+  })
   @Put(':slug')
   @UsePipes(BackendValidationPipe)
   @UseGuards(AuthGuard)
@@ -114,6 +146,17 @@ export class ArticleController {
 
   @ApiOperation({ summary: 'Create comment' })
   @ApiBasicAuth()
+  @ApiExtraModels(CreateCommentDto)
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        comment: {
+          $ref: getSchemaPath(CreateCommentDto),
+        },
+      },
+    },
+  })
   @Post(':slug/comments')
   @UseGuards(AuthGuard)
   @UsePipes(new BackendValidationPipe())

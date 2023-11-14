@@ -14,6 +14,8 @@ import { CommentResponseInterface } from './types/commentResponse.interface';
 import { CreateCommentDto } from './dto/createComment.dto';
 import { ProfileService } from '@app/profile/profile.service';
 import { CommentsResponseInterface } from './types/commentsResponse.interface';
+import { ArticleQueryDto } from './dto/articleQuery.dto';
+import { FeedQueryDto } from './dto/feedQuery.dto';
 
 @Injectable()
 export class ArticleService {
@@ -33,7 +35,7 @@ export class ArticleService {
 
   async findAll(
     userId: number,
-    query: any,
+    query: ArticleQueryDto,
   ): Promise<ArticlesResponseInterface> {
     const queryBuilder = this.dataSource
       .getRepository(ArticleEntity)
@@ -102,7 +104,7 @@ export class ArticleService {
 
   async getFeed(
     userId: number,
-    query: any,
+    query: FeedQueryDto,
   ): Promise<ArticlesResponseInterface> {
     const follows = await this.followRepository.find({
       where: { followerId: userId },
